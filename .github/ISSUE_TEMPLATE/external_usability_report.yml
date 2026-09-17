@@ -1,0 +1,87 @@
+name: External usability report
+description: You used mcausal on your own pipeline without author assistance
+labels: ["external-usability"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do **not** attach proprietary datasets, checkpoints, or secrets.
+        This gate is currently **NOT YET**. Honest negative reports are useful.
+  - type: input
+    id: framework
+    attributes:
+      label: Framework / model
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Training problem
+    validations:
+      required: true
+  - type: textarea
+    id: ordinary
+    attributes:
+      label: What ordinary loss / eval / gradient tools showed
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Which mcausal component was used
+      multiple: true
+      options:
+        - UpdateReality
+        - HistoryShift
+        - ResidualMatch
+        - CLI only
+    validations:
+      required: true
+  - type: dropdown
+    id: no_author
+    attributes:
+      label: Could mcausal be integrated without author assistance?
+      options:
+        - "Yes"
+        - "No"
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: What additional information did it provide?
+    validations:
+      required: true
+  - type: dropdown
+    id: intervention
+    attributes:
+      label: Was an intervention performed?
+      options:
+        - "Yes"
+        - "No"
+    validations:
+      required: true
+  - type: textarea
+    id: residual
+    attributes:
+      label: What happened to the residual?
+  - type: dropdown
+    id: useful
+    attributes:
+      label: Was the result useful?
+      options:
+        - "Yes"
+        - "No"
+        - "Inconclusive"
+    validations:
+      required: true
+  - type: dropdown
+    id: again
+    attributes:
+      label: Would you use mcausal again?
+      options:
+        - "Yes"
+        - "No"
+        - "Unsure"
+    validations:
+      required: true

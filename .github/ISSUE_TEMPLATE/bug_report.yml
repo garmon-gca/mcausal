@@ -1,0 +1,31 @@
+name: Bug report
+description: Reproducible defect in mcausal 0.1.0
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: Do not paste proprietary data, secrets, or private paths.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal reproduction
+      description: Public or synthetic code only.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: mcausal version
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: input
+    id: python
+    attributes:
+      label: Python / PyTorch versions
+    validations:
+      required: true

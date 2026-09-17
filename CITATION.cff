@@ -1,0 +1,14 @@
+cff-version: 1.2.0
+title: mcausal
+message: If you use this software, please cite it as below.
+type: software
+authors:
+  - name: garmon-gca
+version: "0.1.0"
+date-released: "2026-09-17"
+license: Apache-2.0
+repository-code: "https://github.com/garmon-gca/mcausal"
+abstract: >
+  mcausal is a PyTorch causal training debugger. It helps determine
+  not only whether training behavior changed, but whether a suspected
+  training-state variable causally explains that change.
