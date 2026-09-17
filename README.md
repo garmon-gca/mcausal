@@ -4,7 +4,7 @@
 
 It helps determine not only whether training behavior changed, but whether a suspected training-state variable causally explains that change.
 
-Version **0.1.0**. License: Apache-2.0. Author: **Mangust**.
+Version **0.1.1**. License: Apache-2.0. Author: **Mangust**.
 
 Verified on **Python 3.11**. Other Python versions are not claimed.
 
@@ -99,4 +99,4 @@ Do not attach proprietary datasets to issues.
 
 See `CITATION.cff`.
 
-Tag `v0.1.0` is immutable. Clone/tag checks run after freeze: `POST_FREEZE_VERIFICATION.md`.
+Current tag: `v0.1.1`. Historical freeze `v0.1.0` is immutable. Post-freeze clone checks: `POST_FREEZE_VERIFICATION.md`.

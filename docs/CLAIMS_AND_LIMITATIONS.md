@@ -4,7 +4,7 @@ Rule: every public claim has a concrete evidence source. If a sentence needs “
 
 ## Allowed
 
-mcausal 0.1.0:
+mcausal 0.1.1 (same cores as 0.1.0):
 
 - is a Python / PyTorch causal-training diagnostic library (`pyproject.toml`, this repo)
 - contains three frozen cores: UpdateReality, HistoryShift, ResidualMatch (`src/mcausal/`)

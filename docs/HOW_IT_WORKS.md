@@ -1,6 +1,6 @@
 # How it works
 
-Three cores. No fourth probe in 0.1.0.
+Three cores. No fourth probe in 0.1.1.
 
 ## UpdateReality
 

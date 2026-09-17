@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mcausal"
-version = "0.1.0"
+version = "0.1.1"
 description = "Causal training diagnostics for PyTorch"
 readme = "README.md"
 license = { file = "LICENSE" }

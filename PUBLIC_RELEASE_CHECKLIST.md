@@ -1,8 +1,10 @@
 # Public release checklist
 
-Filled at freeze of 0.1.0. Visibility change is **not** performed here.
+Recommended public tag: **`v0.1.1`** (attribution / public-ready patch).  
+`v0.1.0` is preserved unchanged as the historical freeze.  
+Visibility is still **PRIVATE**.
 
-The two open boxes (`GitHub clone`, `tag → reviewed commit`) were verified **after** tag `v0.1.0`. See `POST_FREEZE_VERIFICATION.md`. **Do not retag `v0.1.0`.**
+The two open boxes (`GitHub clone`, `tag → reviewed commit`) on the `v0.1.0` tree were verified after that tag. See `POST_FREEZE_VERIFICATION.md`. **Do not retag `v0.1.0`.**
 
 - [x] license approved (Apache-2.0)
 - [x] attribution correct (`Mangust` in pyproject, README, CITATION.cff, NOTICE; `garmon-gca` only as GitHub owner/URL)

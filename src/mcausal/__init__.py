@@ -6,7 +6,7 @@ from .residual_match import residual_match
 from .schemas import ProbeReport, Status
 from .update_reality import update_reality
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 __all__ = [
     "update_reality",
     "history_shift",
