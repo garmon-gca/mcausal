@@ -2,6 +2,8 @@
 
 Filled at freeze of 0.1.0. Visibility change is **not** performed here.
 
+The two open boxes (`GitHub clone`, `tag → reviewed commit`) were verified **after** tag `v0.1.0`. See `POST_FREEZE_VERIFICATION.md`. **Do not retag `v0.1.0`.**
+
 - [x] license approved (Apache-2.0)
 - [x] attribution correct (`garmon-gca` in pyproject, README, CITATION.cff, NOTICE)
 - [x] disclosure audit PASS (`DISCLOSURE_AUDIT.md`)

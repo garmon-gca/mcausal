@@ -42,14 +42,12 @@ mcausal is **not**:
 git clone https://github.com/garmon-gca/mcausal.git
 cd mcausal
 python -m venv .venv
-.venv\Scripts\activate
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install ".[dev]"
 mcausal --version
 mcausal ref
 python -m pytest
 ```
-
-On Unix: `source .venv/bin/activate`.
 
 Minimal `UpdateReality` example: `examples/minimal_pytorch/run_update_reality.py`.
 
@@ -100,3 +98,5 @@ Do not attach proprietary datasets to issues.
 ## Citation
 
 See `CITATION.cff`.
+
+Tag `v0.1.0` is immutable. Clone/tag checks run after freeze: `POST_FREEZE_VERIFICATION.md`.
