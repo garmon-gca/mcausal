@@ -17,7 +17,7 @@ Also: binaries, archives, files > 500 KiB.
 
 Issue templates contain the word “secret(s)” as **instructions not to paste secrets**. Not credentials.
 
-Author string `garmon-gca` and URL `https://github.com/garmon-gca/mcausal` are intentional public attribution.
+Public author is `Mangust`. The string `garmon-gca` appears only as GitHub owner / repository URL (`https://github.com/garmon-gca/mcausal`).
 
 ## Not in this tree
 

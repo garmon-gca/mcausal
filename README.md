@@ -4,7 +4,7 @@
 
 It helps determine not only whether training behavior changed, but whether a suspected training-state variable causally explains that change.
 
-Version **0.1.0**. License: Apache-2.0. Author: **garmon-gca**.
+Version **0.1.0**. License: Apache-2.0. Author: **Mangust**.
 
 Verified on **Python 3.11**. Other Python versions are not claimed.
 

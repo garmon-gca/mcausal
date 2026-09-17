@@ -3,7 +3,7 @@ title: mcausal
 message: If you use this software, please cite it as below.
 type: software
 authors:
-  - name: garmon-gca
+  - name: Mangust
 version: "0.1.0"
 date-released: "2026-09-17"
 license: Apache-2.0
