@@ -4,7 +4,7 @@
 
 It helps determine not only whether training behavior changed, but whether a suspected training-state variable causally explains that change.
 
-Version **0.1.1**. License: Apache-2.0. Author: **Mangust**.
+Version **0.1.2**. License: Apache-2.0. Author: **Mangust**.
 
 Verified on **Python 3.11**. Other Python versions are not claimed.
 
@@ -12,15 +12,17 @@ Verified on **Python 3.11**. Other Python versions are not claimed.
 
 **UpdateReality** — one training step as a chain:
 
-`gradient → optimizer update → Δparameters → Δfunction`
+`gradient → estimated optimizer update → actual Δparameters → Δfunction`
 
-A small `|gradient|` is not automatically small learning.
+Actual Δparameter is ground truth. The optimizer update is an **estimate**, exact only for a documented subset (plain SGD / Adam / AdamW). A small `|gradient|` is not automatically small learning.
 
-**HistoryShift** — after matching the *current* function, do two systems learn the *next* task differently because of different training history? Same subsequent protocol required. Different trainable sets are **not** history; they are update allocation.
+**HistoryShift** — after an **empirical match on supplied calibration inputs**, do two systems learn the next task differently? A declared protocol is not proof. Unverified gaps are `HISTORY_EFFECT_CANDIDATE`. `HISTORY_EFFECT_PRESENT` requires a measured protocol fingerprint (`strict=True` or `optimizer_a/b`). Different trainable sets are **not** history; they are update allocation.
 
 **ResidualMatch** — you name a suspected mediator and an intervention:
 
 `observed effect → suspected mediator → match/intervene → residual`
+
+It tests **your** causal hypothesis. It does not discover the true cause automatically.
 
 Outcomes include support, rejection, residual remaining, construction-null, inconclusive. There is no causal score 0–100.
 
@@ -99,4 +101,4 @@ Do not attach proprietary datasets to issues.
 
 See `CITATION.cff`.
 
-Current tag: `v0.1.1`. Historical freeze `v0.1.0` is immutable. Post-freeze clone checks: `POST_FREEZE_VERIFICATION.md`.
+Current tag: `v0.1.2`. Historical tags `v0.1.0` and `v0.1.1` are immutable.

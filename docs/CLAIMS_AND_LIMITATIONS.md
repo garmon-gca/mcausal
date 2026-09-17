@@ -4,10 +4,13 @@ Rule: every public claim has a concrete evidence source. If a sentence needs “
 
 ## Allowed
 
-mcausal 0.1.1 (same cores as 0.1.0):
+mcausal 0.1.2 (hardening of 0.1.1; same three cores, no new probes):
 
 - is a Python / PyTorch causal-training diagnostic library (`pyproject.toml`, this repo)
-- contains three frozen cores: UpdateReality, HistoryShift, ResidualMatch (`src/mcausal/`)
+- contains three cores: UpdateReality, HistoryShift, ResidualMatch (`src/mcausal/`)
+- does **not** treat a declared training protocol as verified; unverified gaps are `HISTORY_EFFECT_CANDIDATE`
+- does **not** claim an exact optimizer-update prediction except on a documented subset
+- ResidualMatch tests a user-specified hypothesis; it does not auto-discover the true cause
 - runs reference cases R1/R2/R3 at call time (`mcausal ref`; `src/mcausal/reference/`)
 - can return positive, null, and inconclusive outcomes (`src/mcausal/schemas.py`)
 - was exercised on several **internal** experimental stacks (see `docs/EVIDENCE.md`)

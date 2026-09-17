@@ -7,12 +7,12 @@ from mcausal.cli import main
 
 def test_version_flag(capsys):
     assert main(["--version"]) == 0
-    assert capsys.readouterr().out.strip() == "0.1.1"
+    assert capsys.readouterr().out.strip() == "0.1.2"
 
 
 def test_version_subcommand(capsys):
     assert main(["version"]) == 0
-    assert capsys.readouterr().out.strip() == "0.1.1"
+    assert capsys.readouterr().out.strip() == "0.1.2"
 
 
 def test_report_json_to_html(tmp_path):

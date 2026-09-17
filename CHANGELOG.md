@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.2
+
+Hardening patch. No new probes.
+
+- HistoryShift: declared protocol is not proof; `HISTORY_EFFECT_PRESENT` requires a verified fingerprint; otherwise `HISTORY_EFFECT_CANDIDATE` / `PROTOCOL_UNVERIFIED`; `strict=True` available
+- UpdateReality: `actual_parameter_movement` is ground truth; optimizer prediction is `estimated_update` and only exact for a supported subset; clip applied before the estimate; coupled Adam WD / SGD Nesterov / dampening / AMSGrad → `UNSUPPORTED_FOR_EXACT_UPDATE_ESTIMATE`
+- Function match wording: empirical match on supplied calibration inputs
+- ResidualMatch code unchanged; docs state it tests a user hypothesis, not an automatic cause
+
 ## 0.1.1
 
 Public-ready patch. Metadata and attribution only.

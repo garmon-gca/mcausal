@@ -1,21 +1,28 @@
 # How it works
 
-Three cores. No fourth probe in 0.1.1.
+Three cores. No fourth probe in 0.1.2.
 
 ## UpdateReality
 
 One `loss.backward()` + `optimizer.step()`, instrumented.
 
-Reports gradient norm, optimizer-proposed update, actual Δθ, function movement on calibration inputs, and ratios between those levels. Flags when `|g|` is a bad size meter (Adam ε, clip, weight decay).
+**Ground truth:** actual Δparameter (and Δfunction on the supplied calibration inputs).
+
+**Estimate:** `estimated_update_norm` is computed only for an explicit subset (plain SGD; Adam with `weight_decay=0`; AdamW). Clipping, if requested, is applied **before** the estimate. Coupled Adam weight decay, SGD Nesterov/dampening, AMSGrad, and other classes are `UNSUPPORTED_FOR_EXACT_UPDATE_ESTIMATE` — not a silent approximation.
 
 ## HistoryShift
 
-Requires a matched **current** function (or it returns `CURRENT_FUNCTION_NOT_MATCHED`).
+Function comparison is an **empirical match on the supplied calibration inputs**, not global equality of functions. The report stores calibration shape / n.
 
-Valid as **history** only if the *subsequent* protocol is the same (trainable set, clip, lr groups, new-task data). Declare `subsequent_protocol_a/b`. If those dicts differ, a gap is `UPDATE_ALLOCATION_EFFECT`, not `HISTORY_EFFECT_PRESENT`.
+`optimizer_config` and `subsequent_protocol` are **DECLARED**. They are not proof `train_a`/`train_b` are identical.
 
-Identical labels-but-wait: different history *labels* with identical trajectories → `CONSTRUCTION_NULL`.
+- No measured fingerprint → trajectory gap is `HISTORY_EFFECT_CANDIDATE` (`PROTOCOL_UNVERIFIED`), never unqualified `HISTORY_EFFECT_PRESENT`.
+- Fingerprint match (`optimizer_a/b` or `protocol_fingerprint_a/b`) → `VERIFIED_PROTOCOL`; then a gap may be `HISTORY_EFFECT_PRESENT`.
+- Fingerprint mismatch → `UPDATE_ALLOCATION_EFFECT` (not history).
+- `strict=True` without a fingerprint → `ASSAY_INVALID`.
 
 ## ResidualMatch
 
-You supply measurements and the intervention. The library does not invent the mediator. It reports whether matching it collapsed the effect, left a residual, failed invariants, or was inconclusive.
+**mcausal tests a user-specified causal hypothesis; it does not discover the true cause automatically.**
+
+You supply measurements and the intervention. The library reports whether matching that hypothesis collapsed the effect.

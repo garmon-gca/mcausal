@@ -1,8 +1,8 @@
 # Public release checklist
 
-Recommended public tag: **`v0.1.1`** (attribution / public-ready patch).  
-`v0.1.0` is preserved unchanged as the historical freeze.  
-Visibility is still **PRIVATE**.
+Recommended public tag: **`v0.1.2`** (hardening: protocol verification + honest update estimates).  
+`v0.1.0` and `v0.1.1` are preserved unchanged.  
+Visibility is still **PRIVATE**. External usability is still **NOT YET**.
 
 The two open boxes (`GitHub clone`, `tag → reviewed commit`) on the `v0.1.0` tree were verified after that tag. See `POST_FREEZE_VERIFICATION.md`. **Do not retag `v0.1.0`.**
 

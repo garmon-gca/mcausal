@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from mcausal.update_reality import proposed_update_tensors, update_reality
+from mcausal.update_reality import estimated_update_tensors, proposed_update_tensors, update_reality
 
 
 class M(nn.Module):
@@ -75,3 +75,56 @@ def test_proposed_helper_runs():
     loss.backward()
     u = proposed_update_tensors(opt)
     assert len(u) == 1
+    u2 = estimated_update_tensors(opt)
+    assert len(u2) == 1
+
+
+def test_clip_then_estimate_matches_actual():
+    torch.manual_seed(4)
+    m = M()
+    x = torch.randn(16, 4)
+    y = torch.randn(16, 2)
+    opt = torch.optim.SGD(m.parameters(), lr=1.0)
+
+    def loss_fn(model, batch):
+        xb, yb = batch
+        return F.mse_loss(model(xb), yb)
+
+    rep = update_reality(m, opt, (x, y), x[:4], loss_fn=loss_fn, clip_grad_norm=1e-6)
+    assert rep["clipping"]["did_clip"] is True
+    assert rep["estimated_update_status"] == "EXACT_UPDATE_ESTIMATE"
+    assert abs(rep["ratios"]["actual_over_estimated"] - 1.0) < 0.05
+
+
+def test_adam_coupled_wd_unsupported():
+    torch.manual_seed(5)
+    m = M()
+    x = torch.randn(8, 4)
+    y = torch.randn(8, 2)
+    opt = torch.optim.Adam(m.parameters(), lr=1e-3, weight_decay=0.01)
+
+    def loss_fn(model, batch):
+        xb, yb = batch
+        return F.mse_loss(model(xb), yb)
+
+    rep = update_reality(m, opt, (x, y), x[:4], loss_fn=loss_fn)
+    assert rep["estimated_update_status"] == "UNSUPPORTED_FOR_EXACT_UPDATE_ESTIMATE"
+    assert "adam_coupled_weight_decay" in rep["estimated_update_unsupported_reasons"]
+    assert rep["estimated_update_norm"] is None
+    assert rep["actual_parameter_is_ground_truth"] is True
+
+
+def test_sgd_nesterov_unsupported():
+    torch.manual_seed(6)
+    m = M()
+    x = torch.randn(8, 4)
+    y = torch.randn(8, 2)
+    opt = torch.optim.SGD(m.parameters(), lr=0.1, momentum=0.9, nesterov=True)
+
+    def loss_fn(model, batch):
+        xb, yb = batch
+        return F.mse_loss(model(xb), yb)
+
+    rep = update_reality(m, opt, (x, y), x[:4], loss_fn=loss_fn)
+    assert rep["estimated_update_status"] == "UNSUPPORTED_FOR_EXACT_UPDATE_ESTIMATE"
+    assert "sgd_nesterov" in rep["estimated_update_unsupported_reasons"]

@@ -2,6 +2,8 @@
 
 **Status: NOT YET**
 
+(Unchanged in 0.1.2.)
+
 This is not PASS. Do not change that label without a real stranger.
 
 The stranger:

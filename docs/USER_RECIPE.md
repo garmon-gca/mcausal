@@ -4,13 +4,13 @@ You have this package and these docs. Frozen API:
 
 `update_reality`, `history_shift`, `residual_match`, `write_json`, `write_html`
 
-mcausal will **not** name the mediator for you.
+mcausal tests a **user-specified** causal hypothesis. It does **not** discover the true cause automatically. It will not name the mediator for you.
 
 ## Sequence
 
-1. **Current-function equivalence** — same inputs, compare outputs/logits. If they differ, you are not looking at “history with matched function.” HistoryShift will return `CURRENT_FUNCTION_NOT_MATCHED`.
-2. **Observe subsequent effect** — train both on the **same** next-task protocol. Log loss/eval. If the *protocol* differs (other trainable set, other clip), that is allocation, not history.
-3. **Inspect update reality** — wrap one real step. Read whether `|g|`, proposed update, Δθ, and Δfunction agree.
+1. **Current-function equivalence on a calibration set** — same supplied inputs, compare outputs/logits. This is not global function equality. If they differ, HistoryShift returns `CURRENT_FUNCTION_NOT_MATCHED`.
+2. **Observe subsequent effect** — train both on the **same** next-task protocol. Declaring the protocol is not proof. Pass `optimizer_a/b` (or fingerprints) and prefer `strict=True`. If the protocol actually differs (lr, trainable set, clip), that is allocation, not history.
+3. **Inspect update reality** — wrap one real step. Trust **actual Δθ**. Treat optimizer update as an estimate; check `estimated_update_status`.
 4. **State a suspected mediator** — optimizer buffers, trainable set, replay/data state, clip, … This step is **your hypothesis**. It is not always knowable.
 5. **Intervene / match** — copy or equalize that state only. Keep weights/function invariants.
 6. **Measure residual** — same next-task protocol after the match.

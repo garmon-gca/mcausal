@@ -63,6 +63,28 @@ def function_delta(model: nn.Module, calibration_inputs: Any, y0: torch.Tensor) 
     return {"rms": rms, "max_abs": mx, "cosine": cos, "l2": float(diff.norm())}
 
 
+def calibration_description(inputs: Any) -> dict[str, Any]:
+    if torch.is_tensor(inputs):
+        shape = list(inputs.shape)
+        return {
+            "kind": "tensor",
+            "shape": shape,
+            "dtype": str(inputs.dtype),
+            "n_rows": int(shape[0]) if shape else 1,
+        }
+    if isinstance(inputs, dict) or (hasattr(inputs, "keys") and hasattr(inputs, "__getitem__")):
+        keys = list(inputs.keys())
+        desc: dict[str, Any] = {"kind": "mapping", "keys": [str(k) for k in keys]}
+        if "input_ids" in inputs and torch.is_tensor(inputs["input_ids"]):
+            t = inputs["input_ids"]
+            desc["shape"] = list(t.shape)
+            desc["n_rows"] = int(t.shape[0])
+        return desc
+    if isinstance(inputs, tuple):
+        return {"kind": "tuple", "n_parts": len(inputs)}
+    return {"kind": type(inputs).__name__}
+
+
 def call_model(model: nn.Module, inputs: Any) -> Any:
     if isinstance(inputs, dict):
         return model(**inputs)
@@ -92,18 +114,55 @@ def _grad_norms(model: nn.Module) -> tuple[float, dict[str, float]]:
     return math.sqrt(total), per
 
 
-@torch.no_grad()
-def proposed_update_tensors(optimizer: torch.optim.Optimizer) -> dict[int, torch.Tensor]:
-    """What Adam/SGD/AdamW will apply on the next step(), given current grads + state."""
-    out: dict[int, torch.Tensor] = {}
-    opt_name = type(optimizer).__name__
-    decoupled = isinstance(optimizer, torch.optim.AdamW) or "AdamW" in opt_name
-    is_adam = isinstance(optimizer, (torch.optim.Adam, torch.optim.AdamW)) or "Adam" in opt_name
-    is_sgd = isinstance(optimizer, torch.optim.SGD) or opt_name == "SGD"
+def optimizer_estimate_support(optimizer: torch.optim.Optimizer) -> dict[str, Any]:
+    """Exact Δθ estimate is only claimed for a small, explicit subset."""
+    reasons: list[str] = []
+    if isinstance(optimizer, torch.optim.AdamW):
+        kind = "adamw"
+    elif isinstance(optimizer, torch.optim.Adam):
+        kind = "adam"
+    elif isinstance(optimizer, torch.optim.SGD):
+        kind = "sgd"
+    else:
+        return {
+            "exact_estimate_supported": False,
+            "unsupported_reasons": [f"unsupported optimizer class {type(optimizer).__name__}"],
+            "status": "UNSUPPORTED_FOR_EXACT_UPDATE_ESTIMATE",
+        }
+    for group in optimizer.param_groups:
+        if kind == "sgd":
+            if bool(group.get("nesterov", False)):
+                reasons.append("sgd_nesterov")
+            if float(group.get("dampening", 0.0) or 0.0) != 0.0:
+                reasons.append("sgd_dampening")
+        if kind in ("adam", "adamw"):
+            if bool(group.get("amsgrad", False)):
+                reasons.append("amsgrad")
+        if kind == "adam" and float(group.get("weight_decay", 0.0) or 0.0) != 0.0:
+            reasons.append("adam_coupled_weight_decay")
+    reasons = sorted(set(reasons))
+    ok = len(reasons) == 0
+    return {
+        "exact_estimate_supported": ok,
+        "unsupported_reasons": reasons,
+        "status": "EXACT_UPDATE_ESTIMATE" if ok else "UNSUPPORTED_FOR_EXACT_UPDATE_ESTIMATE",
+        "optimizer_kind": kind,
+    }
 
+
+@torch.no_grad()
+def estimated_update_tensors(optimizer: torch.optim.Optimizer) -> dict[int, torch.Tensor]:
+    """Estimated next step for *supported* SGD/Adam/AdamW only. Call after clipping."""
+    support = optimizer_estimate_support(optimizer)
+    if not support["exact_estimate_supported"]:
+        raise ValueError(
+            "UNSUPPORTED_FOR_EXACT_UPDATE_ESTIMATE: " + ",".join(support["unsupported_reasons"])
+        )
+    out: dict[int, torch.Tensor] = {}
+    kind = support["optimizer_kind"]
     for group in optimizer.param_groups:
         lr = float(group.get("lr", 0.0))
-        wd = float(group.get("weight_decay", 0.0))
+        wd = float(group.get("weight_decay", 0.0) or 0.0)
         maximize = bool(group.get("maximize", False))
         for p in group["params"]:
             if p.grad is None:
@@ -111,11 +170,11 @@ def proposed_update_tensors(optimizer: torch.optim.Optimizer) -> dict[int, torch
             grad = p.grad.detach()
             if maximize:
                 grad = -grad
-            if is_sgd:
+            if kind == "sgd":
                 upd = grad
                 if wd != 0.0:
                     upd = upd + wd * p.detach()
-                momentum = float(group.get("momentum", 0.0))
+                momentum = float(group.get("momentum", 0.0) or 0.0)
                 if momentum != 0.0:
                     buf = optimizer.state[p].get("momentum_buffer")
                     if buf is None:
@@ -125,38 +184,34 @@ def proposed_update_tensors(optimizer: torch.optim.Optimizer) -> dict[int, torch
                     upd = buf
                 out[id(p)] = -lr * upd
                 continue
-            if is_adam:
-                beta1, beta2 = group.get("betas", (0.9, 0.999))
-                eps = float(group.get("eps", 1e-8))
-                state = optimizer.state[p]
-                step = int(state.get("step", 0)) + 1
-                exp_avg = state.get("exp_avg")
-                exp_avg_sq = state.get("exp_avg_sq")
-                if exp_avg is None:
-                    exp_avg = torch.zeros_like(p)
-                    exp_avg_sq = torch.zeros_like(p)
-                else:
-                    exp_avg = exp_avg.detach()
-                    exp_avg_sq = exp_avg_sq.detach()
-                exp_avg = exp_avg * beta1 + (1.0 - beta1) * grad
-                exp_avg_sq = exp_avg_sq * beta2 + (1.0 - beta2) * grad * grad
-                bias1 = 1.0 - beta1**step
-                bias2 = 1.0 - beta2**step
-                denom = exp_avg_sq.sqrt() / math.sqrt(bias2) + eps
-                step_size = lr / bias1
-                upd = -step_size * exp_avg / denom
-                if wd != 0.0:
-                    if decoupled:
-                        upd = upd - lr * wd * p.detach()
-                    else:
-                        # coupled: already in grad if caller added it; PyTorch Adam applies
-                        # weight decay to grad before moments when foreach/fused off:
-                        # we approximate decoupled-off as extra -lr*wd*p (common)
-                        upd = upd - lr * wd * p.detach()
-                out[id(p)] = upd
-                continue
-            out[id(p)] = -lr * grad
+            beta1, beta2 = group.get("betas", (0.9, 0.999))
+            eps = float(group.get("eps", 1e-8))
+            state = optimizer.state[p]
+            step = int(state.get("step", 0)) + 1
+            exp_avg = state.get("exp_avg")
+            exp_avg_sq = state.get("exp_avg_sq")
+            if exp_avg is None:
+                exp_avg = torch.zeros_like(p)
+                exp_avg_sq = torch.zeros_like(p)
+            else:
+                exp_avg = exp_avg.detach()
+                exp_avg_sq = exp_avg_sq.detach()
+            exp_avg = exp_avg * beta1 + (1.0 - beta1) * grad
+            exp_avg_sq = exp_avg_sq * beta2 + (1.0 - beta2) * grad * grad
+            bias1 = 1.0 - beta1**step
+            bias2 = 1.0 - beta2**step
+            denom = exp_avg_sq.sqrt() / math.sqrt(bias2) + eps
+            step_size = lr / bias1
+            upd = -step_size * exp_avg / denom
+            if wd != 0.0 and kind == "adamw":
+                upd = upd - lr * wd * p.detach()
+            out[id(p)] = upd
     return out
+
+
+def proposed_update_tensors(optimizer: torch.optim.Optimizer) -> dict[int, torch.Tensor]:
+    """Alias of estimated_update_tensors (supported configs only)."""
+    return estimated_update_tensors(optimizer)
 
 
 def _update_norm(updates: dict[int, torch.Tensor]) -> float:
@@ -229,9 +284,6 @@ def update_reality(
     loss.backward()
 
     grad_norm_raw, per_raw = _grad_norms(model)
-    proposed = proposed_update_tensors(optimizer)
-    proposed_norm = _update_norm(proposed)
-
     clip_info: dict[str, Any] | None = None
     if clip_grad_norm is not None:
         unclipped = grad_norm_raw
@@ -249,6 +301,17 @@ def update_reality(
         grad_norm = grad_norm_raw
         per = per_raw
 
+    support = optimizer_estimate_support(optimizer)
+    estimated_norm: float | None
+    if support["exact_estimate_supported"]:
+        estimated = estimated_update_tensors(optimizer)
+        estimated_norm = _update_norm(estimated)
+    else:
+        estimated_norm = None
+        warnings.append(
+            "UNSUPPORTED_FOR_EXACT_UPDATE_ESTIMATE: " + ",".join(support["unsupported_reasons"])
+        )
+
     optimizer.step()
     after = snapshot_params(model)
     actual_norm = param_delta_norm(before, after)
@@ -262,24 +325,26 @@ def update_reality(
             return float("nan")
         return a / b
 
+    est = float("nan") if estimated_norm is None else estimated_norm
     ratios = {
         "actual_delta_over_grad": _ratio(actual_norm, grad_norm),
-        "proposed_over_grad": _ratio(proposed_norm, grad_norm),
-        "actual_over_proposed": _ratio(actual_norm, proposed_norm),
+        "estimated_over_grad": _ratio(est, grad_norm),
+        "proposed_over_grad": _ratio(est, grad_norm),
+        "actual_over_estimated": _ratio(actual_norm, est),
+        "actual_over_proposed": _ratio(actual_norm, est),
         "actual_over_grad_times_lr": _ratio(actual_norm, grad_times_lr),
         "function_l2_over_actual_delta": _ratio(fdelta["l2"], actual_norm),
         "function_l2_over_grad": _ratio(fdelta["l2"], grad_norm),
     }
-    # Divergence of *levels*: |g| is not a learning-size meter if Adam/clip/wd intervene.
     level_diverge = False
     r = ratios["actual_over_grad_times_lr"]
     if math.isfinite(r) and (r < 0.2 or r > 5.0):
         level_diverge = True
         warnings.append("actual Δθ is not ~ lr·‖g‖; do not read small/large grad as small/large learning")
-    r2 = ratios["actual_over_proposed"]
-    if math.isfinite(r2) and abs(r2 - 1.0) > 0.15:
+    r2 = ratios["actual_over_estimated"]
+    if support["exact_estimate_supported"] and math.isfinite(r2) and abs(r2 - 1.0) > 0.15:
         level_diverge = True
-        warnings.append("proposed optimizer update ≠ actual Δparameter (clip / hook / skipped params)")
+        warnings.append("estimated update ≠ actual Δparameter")
     if clip_info and clip_info.get("did_clip"):
         level_diverge = True
 
@@ -290,9 +355,14 @@ def update_reality(
         "gradient_norm": grad_norm,
         "gradient_norm_raw": grad_norm_raw,
         "gradient_norm_per_param": per,
-        "optimizer_proposed_update_norm": proposed_norm,
+        "estimated_update_norm": estimated_norm,
+        "optimizer_proposed_update_norm": estimated_norm,
+        "estimated_update_status": support["status"],
+        "estimated_update_unsupported_reasons": support["unsupported_reasons"],
         "actual_parameter_movement": actual_norm,
+        "actual_parameter_is_ground_truth": True,
         "output_function_movement": fdelta,
+        "calibration": calibration_description(calibration_inputs),
         "ratios": ratios,
         "levels_diverge": level_diverge,
         "optimizer": meta,
@@ -301,7 +371,7 @@ def update_reality(
         "epsilon": meta.get("eps"),
         "loss": float(loss.detach()),
         "warnings": warnings,
-        "note": "A small gradient is not automatically small learning.",
+        "note": "A small gradient is not automatically small learning. actual Δparameter is ground truth; estimated_update is exact only when estimated_update_status=EXACT_UPDATE_ESTIMATE.",
     }
     return jsonable(report)
 
